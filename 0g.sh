@@ -161,12 +161,12 @@ view_logs() {
 check_update() {
     echo "检查是否有新版本..."
     LATEST_VERSION=$(curl -s $REPO_URL || echo "unknown")
-    
+
     if [[ "$LATEST_VERSION" == "unknown" ]]; then
         echo "无法获取最新版本信息，请检查网络或 GitHub 仓库。"
         return
     fi
-    
+
     if [[ "$LATEST_VERSION" != "$SCRIPT_VERSION" ]]; then
         echo "发现新版本: $LATEST_VERSION (当前版本: $SCRIPT_VERSION)"
         read -p "是否更新脚本？(y/N): " update_choice
@@ -205,14 +205,13 @@ set_alias() {
 
 }
 
-SCRIPT_VERSION="1.0.1"  # 本地版本
+SCRIPT_VERSION="1.0.1" # 本地版本
 REPO_URL="https://raw.githubusercontent.com/yixingweb3/0g-script/main/version.txt"
 SCRIPT_URL="https://raw.githubusercontent.com/yixingweb3/0g-script/main/0g.sh"
 
-
 # 初始化
 set_alias
-check_update  # 每次启动时检查更新
+check_update # 每次启动时检查更新
 
 # -------------------------------
 # 主菜单
