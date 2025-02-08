@@ -173,7 +173,7 @@ check_update() {
         if [[ "$update_choice" == "y" || "$update_choice" == "Y" ]]; then
             update_script
         fi
-    else
+    # else
         # echo "当前已是最新版本 ($SCRIPT_VERSION)。"
     fi
 }
@@ -205,7 +205,7 @@ set_alias() {
 
 }
 
-SCRIPT_VERSION="1.0.1" # 本地版本
+SCRIPT_VERSION="1.0.2" # 本地版本
 REPO_URL="https://raw.githubusercontent.com/yixingweb3/0g-script/main/version.txt"
 SCRIPT_URL="https://raw.githubusercontent.com/yixingweb3/0g-script/main/0g.sh"
 
