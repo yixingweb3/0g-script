@@ -169,7 +169,7 @@ check_update() {
 
     if [[ "$LATEST_VERSION" != "$SCRIPT_VERSION" ]]; then
         echo "发现新版本: $LATEST_VERSION (当前版本: $SCRIPT_VERSION)"
-        read -p "是否更新脚本？(默认 Y): " update_choice
+        read -p "是否更新脚本？(Y/n): " update_choice
         update_choice=${update_choice:-Y} # 默认为 Y, 更新
         if [[ "$update_choice" == "y" || "$update_choice" == "Y" ]]; then
             update_script
