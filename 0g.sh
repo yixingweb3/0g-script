@@ -192,7 +192,7 @@ update_script() {
 check_root() {
     # 检查是否以 root 权限运行
     if [ "$(id -u)" -ne 0 ]; then
-        echo "❌ 需要 root 权限运行此脚本！请使用 'sudo -i' 进入 root 再执行。"
+        echo "❌ 需要 root 权限运行此脚本！请使用 'sudo -i' 切换 root 用户再执行。"
         exit 1
     fi
 }
