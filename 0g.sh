@@ -159,7 +159,7 @@ view_logs() {
 
 # 检查更新
 check_update() {
-    echo "检查是否有新版本..."
+    # echo "检查是否有新版本..."
     LATEST_VERSION=$(curl -s $REPO_URL || echo "unknown")
 
     if [[ "$LATEST_VERSION" == "unknown" ]]; then
@@ -174,7 +174,7 @@ check_update() {
             update_script
         fi
     else
-        echo "当前已是最新版本 ($SCRIPT_VERSION)。"
+        # echo "当前已是最新版本 ($SCRIPT_VERSION)。"
     fi
 }
 
@@ -232,6 +232,7 @@ while true; do
     echo "4. 查看 EVM 私钥"
     echo "5. 修改 EVM 私钥"
     echo "6. 查看 0g 存储节点日志"
+    echo "7. 检查更新"
     echo "0. 退出"
     echo "✅ 退出后可以输入 '0g' 来打开脚本管理菜单！"
     echo "============================"
@@ -262,6 +263,11 @@ while true; do
         # 选项 6 为持续监控日志，用户需按 Ctrl+C 退出后再返回主菜单
         view_logs
         read -p "输入任意键返回主菜单 (Enter): " dummy
+        ;;
+    7)
+        echo "当前版本 ($SCRIPT_VERSION)。"
+        echo "检查是否有新版本..."
+        check_update
         ;;
     0)
         echo "退出..."
