@@ -147,7 +147,7 @@ modify_evm_key() {
     echo "=============================================="
 }
 
-# 查看节点日志（通过 RPC 接口监控）
+# 查看节点日志
 view_logs() {
     echo "=============================================="
     echo "显示 0g 存储节点日志最新的 50 行："
@@ -179,12 +179,22 @@ check_update() {
     fi
 }
 
+# ------ 基础模块 ------
 # 更新脚本
 update_script() {
     echo "正在更新脚本..."
     curl -o "$0" "$SCRIPT_URL" && chmod +x "$0"
     echo "脚本更新成功！请重新运行 '0g' 命令。"
     exit 0
+}
+
+# 检查 root 权限
+check_root() {
+    # 检查是否以 root 权限运行
+    if [ "$(id -u)" -ne 0 ]; then
+        echo "❌ 需要 root 权限运行此脚本！请使用 'sudo -i' 进入 root 再执行。"
+        exit 1
+    fi
 }
 
 # 配置脚本的快捷指令
@@ -199,18 +209,33 @@ set_alias() {
     if ! grep -Fxq "$ALIAS_CMD" ~/.bashrc; then
         echo "$ALIAS_CMD" >>~/.bashrc
         echo "$ALIAS_CMD" >>~/.zshrc
+
+        # 立即在当前 Shell 中生效
+        eval "$ALIAS_CMD"
+
+        # 让新终端也生效
         source ~/.bashrc
         source ~/.zshrc
+
         echo "配置快捷指令成功, 你可以输入 '0g' 来打开脚本管理菜单"
     fi
 
 }
 
-SCRIPT_VERSION="1.0.3" # 本地版本
+# 配置脚本的快捷指令
+set_alias() {
+    SCRIPT_PATH=$(realpath "$0")
+    ALIAS_CMD="alias 0g='bash $SCRIPT_PATH'"
+
+}
+
+# ------ 变量 ------
+SCRIPT_VERSION="1.0.4" # 本地版本
 REPO_URL="https://raw.githubusercontent.com/yixingweb3/0g-script/main/version.txt"
 SCRIPT_URL="https://raw.githubusercontent.com/yixingweb3/0g-script/main/0g.sh"
 
-# 初始化
+# ------ 初始化 ------
+check_root
 set_alias
 check_update # 每次启动时检查更新
 
