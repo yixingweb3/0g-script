@@ -6,19 +6,12 @@ set -e
 #
 # 功能：
 #   1. 安装 0g 存储节点（更新系统、安装依赖、安装 Rust、拉取代码、构建项目、下载配置文件，
-#      并交互式提示输入 EVM 私钥写入配置文件，创建 systemd 服务并启动）
+#      提示输入 EVM 私钥写入配置文件，创建 systemd 服务并启动）
 #   2. 查看服务运行状态
 #   3. 卸载存储节点
 #   4. 查看 EVM 私钥（miner_key）
 #   5. 修改 EVM 私钥（miner_key）
-#   6. 查看 0g 存储节点日志（通过 RPC 接口监控节点状态）
-#
-# 使用说明：
-#   执行脚本后会显示主菜单，选择对应操作后，操作完成后会提示你输入 “继续”
-#   后返回主菜单。
-#
-# 调试建议：
-#   请先在本地 Linux 环境（或 WSL/Docker 等）中测试每个功能，确认无误后再部署至服务器使用。
+#   6. 查看 0g 存储节点日志
 # ===============================
 
 # 安装节点
@@ -164,6 +157,35 @@ view_logs() {
     echo "=============================================="
 }
 
+# 检查更新
+check_update() {
+    echo "检查是否有新版本..."
+    LATEST_VERSION=$(curl -s $REPO_URL || echo "unknown")
+    
+    if [[ "$LATEST_VERSION" == "unknown" ]]; then
+        echo "无法获取最新版本信息，请检查网络或 GitHub 仓库。"
+        return
+    fi
+    
+    if [[ "$LATEST_VERSION" != "$SCRIPT_VERSION" ]]; then
+        echo "发现新版本: $LATEST_VERSION (当前版本: $SCRIPT_VERSION)"
+        read -p "是否更新脚本？(y/N): " update_choice
+        if [[ "$update_choice" == "y" || "$update_choice" == "Y" ]]; then
+            update_script
+        fi
+    else
+        echo "当前已是最新版本 ($SCRIPT_VERSION)。"
+    fi
+}
+
+# 更新脚本
+update_script() {
+    echo "正在更新脚本..."
+    curl -o "$0" "$SCRIPT_URL" && chmod +x "$0"
+    echo "脚本更新成功！请重新运行 '0g' 命令。"
+    exit 0
+}
+
 # 配置脚本的快捷指令
 set_alias() {
     # 获取当前脚本的真实路径
@@ -183,8 +205,14 @@ set_alias() {
 
 }
 
+SCRIPT_VERSION="1.0.1"  # 本地版本
+REPO_URL="https://raw.githubusercontent.com/yixingweb3/0g-script/main/version.txt"
+SCRIPT_URL="https://raw.githubusercontent.com/yixingweb3/0g-script/main/0g.sh"
+
+
 # 初始化
 set_alias
+check_update  # 每次启动时检查更新
 
 # -------------------------------
 # 主菜单
@@ -196,6 +224,8 @@ while true; do
     echo "============================"
     echo "本脚本由 逸星web3 维护, 免费开源"
     echo "推特: x.com/yixing_web3"
+    echo "有问题请在推特留言或加群"
+    echo "TG 群: t.me/yixingweb3_group"
     echo "============================"
     echo "1. 安装 0g 存储节点"
     echo "2. 查看服务运行状态"
