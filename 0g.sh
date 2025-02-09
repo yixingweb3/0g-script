@@ -161,6 +161,7 @@ view_logs() {
 check_update() {
     # echo "检查是否有新版本..."
     LATEST_VERSION=$(curl -s $REPO_URL || echo "unknown")
+    echo "LATEST_VERSION: $LATEST_VERSION (本地版本: $SCRIPT_VERSION)"
 
     if [[ "$LATEST_VERSION" == "unknown" ]]; then
         echo "无法获取最新版本信息，请检查网络或 GitHub 仓库。"
