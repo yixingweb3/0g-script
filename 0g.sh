@@ -14,7 +14,8 @@ set -e
 #   6. 查看 0g 存储节点日志
 # ===============================
 
-# 安装节点
+# ========== 0g 存储节点 =============
+# 安装存储节点
 install_node() {
     echo "=============================================="
     echo "开始安装 0g 存储节点"
@@ -157,6 +158,188 @@ view_logs() {
     echo "=============================================="
 }
 
+# ========== 0g DA 节点 =============
+# 一键安装 DA 节点
+install_da_node() {
+    echo "=============================================="
+    echo "开始安装 0G-DA 节点"
+    echo "=============================================="
+
+    echo "[1] 更新软件包列表并安装依赖..."
+    sudo apt-get update && sudo apt-get install -y clang cmake build-essential pkg-config libssl-dev protobuf-compiler llvm llvm-dev curl jq
+
+    echo "[2] 安装 Go..."
+    cd $HOME
+    ver="1.23.3"
+    wget -4 -O "go${ver}.linux-amd64.tar.gz" "https://golang.org/dl/go${ver}.linux-amd64.tar.gz"
+    sudo rm -rf /usr/local/go
+    sudo tar -C /usr/local -xzf "go${ver}.linux-amd64.tar.gz"
+    rm "go${ver}.linux-amd64.tar.gz"
+    echo "export PATH=\$PATH:/usr/local/go/bin:\$HOME/go/bin" >>~/.bash_profile
+    source ~/.bash_profile
+    go version
+
+    echo "[3] 安装 Rust..."
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+    source "$HOME/.cargo/env"
+    rustc --version
+
+    echo "[4] 克隆 0G-DA 节点仓库..."
+    git clone -b v1.1.3 https://github.com/0glabs/0g-da-node.git "$HOME/0g-da-node"
+    cd "$HOME/0g-da-node"
+
+    echo "[5] 保存本地修改（如果有）..."
+    git stash
+
+    echo "[6] 获取所有标签并检出特定 commit（9a48827）..."
+    git fetch --all --tags
+    git checkout 9a48827
+
+    echo "[7] 更新子模块..."
+    git submodule update --init
+
+    echo "[8] 编译项目，请稍候..."
+    cargo build --release
+
+    echo "[9] 下载参数文件..."
+    ./dev_support/download_params.sh
+
+    echo "[10] 生成 BLS 私钥..."
+    bls_key=$(cargo run --bin key-gen | tail -n 1)
+    echo "生成的 BLS 私钥: $bls_key"
+
+    echo "[11] 下载最新的配置文件..."
+    rm -f "$HOME/0g-da-node/config.toml"
+    curl -o "$HOME/0g-da-node/config.toml" https://raw.githubusercontent.com/zstake-xyz/test/refs/heads/main/0g_da_config.toml
+
+    echo "[12] 更新配置文件中的 signer_bls_private_key..."
+    sed -i -E 's/^[[:space:]]*#?[[:space:]]*signer_bls_private_key[[:space:]]*=[[:space:]]*"([^"]*)".*/signer_bls_private_key = "'"${bls_key}"'"/' "$HOME/0g-da-node/config.toml"
+
+    echo "[13] 提示输入 signer_eth_private_key 和 miner_eth_private_key..."
+    read -p "请输入你的 signer_eth_private_key (ETH 私钥，需要至少30个测试网代币，若相同可直接输入): " signer_eth_private_key
+    read -p "请输入你的 miner_eth_private_key (ETH 私钥，推荐使用不同于 signer_eth_private_key): " miner_eth_private_key
+
+    sed -i -E 's/^[[:space:]]*#?[[:space:]]*signer_eth_private_key[[:space:]]*=[[:space:]]*"([^"]*)".*/signer_eth_private_key = "'"${signer_eth_private_key}"'"/' "$HOME/0g-da-node/config.toml"
+    sed -i -E 's/^[[:space:]]*#?[[:space:]]*miner_eth_private_key[[:space:]]*=[[:space:]]*"([^"]*)".*/miner_eth_private_key = "'"${miner_eth_private_key}"'"/' "$HOME/0g-da-node/config.toml"
+
+    echo "[14] 创建 DA 节点 systemd 服务文件..."
+    sudo tee /etc/systemd/system/0gda.service >/dev/null <<EOF
+[Unit]
+Description=0G-DA Node
+After=network.target
+
+[Service]
+User=root
+WorkingDirectory=/root/0g-da-node
+ExecStart=/root/0g-da-node/target/release/server --config /root/0g-da-node/config.toml
+Restart=always
+RestartSec=10
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+    echo "[15] 重新加载 systemd，并启用启动 DA 节点服务..."
+    sudo systemctl daemon-reload
+    sudo systemctl enable 0gda
+    sudo systemctl start 0gda
+
+    echo "=============================================="
+    echo "0G-DA 节点安装完成！"
+    echo "你可以使用相应功能查看服务状态和日志。"
+    echo "=============================================="
+}
+
+# 查看 DA 节点运行状态
+status_da_node() {
+    echo "=============================================="
+    echo "查看 DA 节点服务状态："
+    sudo systemctl status 0gda
+    echo "=============================================="
+}
+
+# 查看 DA 节点签名者私钥 (signer_eth_private_key)
+view_signer_eth_key() {
+    echo "=============================================="
+    echo "当前 DA 节点签名者私钥 signer_eth_private_key："
+    sed -nE 's/^[[:space:]]*#?[[:space:]]*signer_eth_private_key[[:space:]]*=[[:space:]]*"([^"]*)".*/\1/p' "$HOME/0g-da-node/config.toml"
+    echo "=============================================="
+}
+
+# 修改 DA 节点签名者私钥 (signer_eth_private_key)
+modify_signer_eth_key() {
+    echo "当前 DA 节点签名者私钥 signer_eth_private_key："
+    sed -nE 's/^[[:space:]]*#?[[:space:]]*signer_eth_private_key[[:space:]]*=[[:space:]]*"([^"]*)".*/\1/p' "$HOME/0g-da-node/config.toml"
+    read -p "请输入新的 signer_eth_private_key: " new_signer_eth_key
+    sed -i -E 's/^[[:space:]]*#?[[:space:]]*signer_eth_private_key[[:space:]]*=[[:space:]]*"([^"]*)".*/signer_eth_private_key = "'"${new_signer_eth_key}"'"/' "$HOME/0g-da-node/config.toml"
+    echo "signer_eth_private_key 已更新。"
+}
+
+# 查看 DA 节点矿工私钥 (miner_eth_private_key)
+view_miner_eth_key() {
+    echo "=============================================="
+    echo "当前 DA 节点矿工私钥 miner_eth_private_key："
+    sed -nE 's/^[[:space:]]*#?[[:space:]]*miner_eth_private_key[[:space:]]*=[[:space:]]*"([^"]*)".*/\1/p' "$HOME/0g-da-node/config.toml"
+    echo "=============================================="
+}
+
+# 修改 DA 节点矿工私钥 (miner_eth_private_key)
+modify_miner_eth_key() {
+    echo "当前 DA 节点矿工私钥 miner_eth_private_key："
+    sed -nE 's/^[[:space:]]*#?[[:space:]]*miner_eth_private_key[[:space:]]*=[[:space:]]*"([^"]*)".*/\1/p' "$HOME/0g-da-node/config.toml"
+    read -p "请输入新的 miner_eth_private_key: " new_miner_eth_key
+    sed -i -E 's/^[[:space:]]*#?[[:space:]]*miner_eth_private_key[[:space:]]*=[[:space:]]*"([^"]*)".*/miner_eth_private_key = "'"${new_miner_eth_key}"'"/' "$HOME/0g-da-node/config.toml"
+    echo "miner_eth_private_key 已更新。"
+}
+
+# 查看 BLS 私钥 (signer_bls_private_key)
+view_bls_key() {
+    echo "=============================================="
+    echo "当前 DA 节点 BLS 私钥 signer_bls_private_key："
+    sed -nE 's/^[[:space:]]*#?[[:space:]]*signer_bls_private_key[[:space:]]*=[[:space:]]*"([^"]*)".*/\1/p' "$HOME/0g-da-node/config.toml"
+    echo "=============================================="
+}
+
+# 修改 BLS 私钥 (signer_bls_private_key)
+modify_bls_key() {
+    echo "当前 DA 节点 BLS 私钥 signer_bls_private_key："
+    sed -nE 's/^[[:space:]]*#?[[:space:]]*signer_bls_private_key[[:space:]]*=[[:space:]]*"([^"]*)".*/\1/p' "$HOME/0g-da-node/config.toml"
+    read -p "请输入新的 signer_bls_private_key: " new_bls_key
+    sed -i -E 's/^[[:space:]]*#?[[:space:]]*signer_bls_private_key[[:space:]]*=[[:space:]]*"([^"]*)".*/signer_bls_private_key = "'"${new_bls_key}"'"/' "$HOME/0g-da-node/config.toml"
+    echo "signer_bls_private_key 已更新。"
+}
+
+# 查看 DA 节点日志
+view_da_logs() {
+    echo "=============================================="
+    echo "显示 DA 节点服务日志："
+    # 实时日志
+    sudo journalctl -u 0gda -f -o cat
+    echo "=============================================="
+}
+
+# 重启 DA 节点
+restart_da_node() {
+    echo "正在重启 DA 节点服务..."
+    sudo systemctl restart 0gda
+    echo "DA 节点服务已重启。"
+}
+
+# 卸载 DA 节点
+uninstall_da_node() {
+    echo "=============================================="
+    echo "开始卸载 DA 节点..."
+    sudo systemctl stop 0gda 2>/dev/null || true
+    sudo systemctl disable 0gda 2>/dev/null || true
+    sudo rm -f /etc/systemd/system/0gda.service
+    rm -rf "$HOME/0g-da-node"
+    sudo systemctl daemon-reload
+    echo "DA 节点已卸载。"
+    echo "=============================================="
+}
+
+# ------ 基础模块 ------
 # 检查更新
 check_update() {
     # echo "检查是否有新版本..."
@@ -179,7 +362,6 @@ check_update() {
     fi
 }
 
-# ------ 基础模块 ------
 # 更新脚本
 update_script() {
     echo "正在更新脚本..."
@@ -241,7 +423,7 @@ LIGHT_BLUE='\033[1;34m'
 NC='\033[0m'
 
 # ------ 变量 ------
-SCRIPT_VERSION="1.0.6" # 本地版本
+SCRIPT_VERSION="1.0.7" # 本地版本
 REPO_URL="https://raw.githubusercontent.com/yixingweb3/0g-script/main/version.txt"
 SCRIPT_URL="https://raw.githubusercontent.com/yixingweb3/0g-script/main/0g.sh"
 
@@ -272,11 +454,24 @@ while true; do
     echo -e "${CYAN}6.${NC} 查看 0g 存储节点日志"
     echo -e "${CYAN}7.${NC} 检查更新"
     # echo -e "${CYAN}8.${NC} 生成新钱包（助记词、私钥、地址）"
+    echo -e "${LIGHT_GRAY}============================${NC}"
+    echo -e "${CYAN}8.${NC} 安装 DA 节点"
+    echo -e "${CYAN}9.${NC} 查看 DA 节点运行状态"
+    echo -e "${CYAN}10.${NC} 查看 DA 节点签名者私钥"
+    echo -e "${CYAN}11.${NC} 修改 DA 节点签名者私钥"
+    echo -e "${CYAN}12.${NC} 查看 DA 节点矿工私钥"
+    echo -e "${CYAN}13.${NC} 修改 DA 节点矿工私钥"
+    echo -e "${CYAN}14.${NC} 查看 BLS 私钥"
+    echo -e "${CYAN}15.${NC} 修改 BLS 私钥"
+    echo -e "${CYAN}16.${NC} 查看 DA 节点日志"
+    echo -e "${CYAN}17.${NC} 重启 DA 节点"
+    echo -e "${CYAN}18.${NC} 卸载 DA 节点"
+    echo -e "${LIGHT_GRAY}============================${NC}"
     echo -e "${CYAN}0.${NC} 退出"
     echo -e "${LIGHT_GRAY}============================${NC}"
     echo -e "退出后可以输入 ${YELLOW}0g${NC} 来打开脚本管理菜单！"
     echo -e "${LIGHT_GRAY}============================${NC}"
-    read -p "$(echo -e "${YELLOW}请选择操作 (0-7): ${NC}")" choice
+    read -p "$(echo -e "${YELLOW}请选择操作 (0-18): ${NC}")" choice
 
     case $choice in
     1)
@@ -308,10 +503,54 @@ while true; do
         echo "检查是否有新版本..."
         check_update
         ;;
-    # 8)
-    #     generate_wallet_module
-    #     read -p "输入任意键返回主菜单 (Enter): " dummy
-    #     ;;
+        # 8)
+        #     generate_wallet_module
+        #     read -p "输入任意键返回主菜单 (Enter): " dummy
+        #     ;;
+    8)
+        install_da_node
+        read -p "输入任意键返回主菜单 (Enter): " dummy
+        ;;
+    9)
+        status_da_node
+        read -p "输入任意键返回主菜单 (Enter): " dummy
+        ;;
+    10)
+        view_signer_eth_key
+        read -p "输入任意键返回主菜单 (Enter): " dummy
+        ;;
+    11)
+        modify_signer_eth_key
+        read -p "输入任意键返回主菜单 (Enter): " dummy
+        ;;
+    12)
+        view_miner_eth_key
+        read -p "输入任意键返回主菜单 (Enter): " dummy
+        ;;
+    13)
+        modify_miner_eth_key
+        read -p "输入任意键返回主菜单 (Enter): " dummy
+        ;;
+    14)
+        view_bls_key
+        read -p "输入任意键返回主菜单 (Enter): " dummy
+        ;;
+    15)
+        modify_bls_key
+        read -p "输入任意键返回主菜单 (Enter): " dummy
+        ;;
+    16)
+        view_da_logs
+        read -p "输入任意键返回主菜单 (Enter): " dummy
+        ;;
+    17)
+        restart_da_node
+        read -p "输入任意键返回主菜单 (Enter): " dummy
+        ;;
+    18)
+        uninstall_da_node
+        read -p "输入任意键返回主菜单 (Enter): " dummy
+        ;;
     0)
         echo "退出..."
         exit 0
