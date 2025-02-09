@@ -276,7 +276,7 @@ while true; do
     echo -e "${LIGHT_GRAY}============================${NC}"
     echo -e "退出后可以输入 ${YELLOW}0g${NC} 来打开脚本管理菜单！"
     echo -e "${LIGHT_GRAY}============================${NC}"
-    read -p "$(echo -e "${YELLOW}请选择操作 (0-8): ${NC}")" choice
+    read -p "$(echo -e "${YELLOW}请选择操作 (0-7): ${NC}")" choice
 
     case $choice in
     1)
