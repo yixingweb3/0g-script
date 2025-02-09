@@ -366,7 +366,7 @@ check_update() {
 update_script() {
     echo "正在更新脚本..."
     curl -o "$0" "$SCRIPT_URL" && chmod +x "$0"
-    echo "脚本更新成功！请重新运行 '0g' 命令。"
+    echo "脚本更新成功！请重新运行 '0g' 或 'bash 0g.sh' 命令。"
     exit 0
 }
 
