@@ -242,7 +242,7 @@ LIGHT_BLUE='\033[1;34m'
 NC='\033[0m'
 
 # ------ 变量 ------
-SCRIPT_VERSION="1.0.5" # 本地版本
+SCRIPT_VERSION="1.0.6" # 本地版本
 REPO_URL="https://raw.githubusercontent.com/yixingweb3/0g-script/main/version.txt"
 SCRIPT_URL="https://raw.githubusercontent.com/yixingweb3/0g-script/main/0g.sh"
 
