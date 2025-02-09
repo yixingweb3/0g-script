@@ -216,8 +216,8 @@ install_da_node() {
     sed -i -E 's/^[[:space:]]*#?[[:space:]]*signer_bls_private_key[[:space:]]*=[[:space:]]*"([^"]*)".*/signer_bls_private_key = "'"${bls_key}"'"/' "$HOME/0g-da-node/config.toml"
 
     echo "[13] 提示输入 signer_eth_private_key 和 miner_eth_private_key..."
-    read -p "请输入你的 signer_eth_private_key (ETH 私钥，需要至少30个测试网代币，若相同可直接输入): " signer_eth_private_key
-    read -p "请输入你的 miner_eth_private_key (ETH 私钥，推荐使用不同于 signer_eth_private_key): " miner_eth_private_key
+    read -p "请输入你的 DA 节点签名者私钥 (ETH 私钥，0x 开头，需要至少30个测试网代币): " signer_eth_private_key
+    read -p "请输入你的 DA 节点矿工私钥 (ETH 私钥，0x 开头，可以和上面相同): " miner_eth_private_key
 
     sed -i -E 's/^[[:space:]]*#?[[:space:]]*signer_eth_private_key[[:space:]]*=[[:space:]]*"([^"]*)".*/signer_eth_private_key = "'"${signer_eth_private_key}"'"/' "$HOME/0g-da-node/config.toml"
     sed -i -E 's/^[[:space:]]*#?[[:space:]]*miner_eth_private_key[[:space:]]*=[[:space:]]*"([^"]*)".*/miner_eth_private_key = "'"${miner_eth_private_key}"'"/' "$HOME/0g-da-node/config.toml"
