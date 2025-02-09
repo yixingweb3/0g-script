@@ -7,7 +7,7 @@ set -e
 # 功能：
 #   1. 安装 0g 存储节点（更新系统、安装依赖、安装 Rust、拉取代码、构建项目、下载配置文件，
 #      提示输入 EVM 私钥写入配置文件，创建 systemd 服务并启动）
-#   2. 查看服务运行状态
+#   2. 查看存储节点运行状态
 #   3. 卸载存储节点
 #   4. 查看 EVM 私钥（miner_key）
 #   5. 修改 EVM 私钥（miner_key）
@@ -56,9 +56,9 @@ install_node() {
     rm -f "$HOME/0g-storage-node/run/config.toml"
     curl -o "$HOME/0g-storage-node/run/config.toml" https://raw.githubusercontent.com/zstake-xyz/test/refs/heads/main/0g_storage_config.toml
 
-    # 校验并交互式提示输入 EVM 私钥（必须以 0x 开头，总长度66位）
+    # 校验并交互式提示输入 EVM 私钥（必须以 0x 开头，总长度 66 位）
     while true; do
-        read -p "请输入你的 EVM 私钥 (必须以 0x 开头，总长度66位，例如 0x1234abcd...): " evm_private_key
+        read -p "请输入你的 EVM 私钥 (推荐新钱包, 必须以 0x 开头，总长度66位，例如 0x1234abcd...): " evm_private_key
         if [[ "$evm_private_key" =~ ^0x[0-9a-fA-F]{64}$ ]]; then
             break
         else
@@ -100,7 +100,7 @@ EOF
 # 查看服务状态
 status_node() {
     echo "=============================================="
-    echo "查看 zgs 服务状态："
+    echo "查看 zgs 服务状态：(Ctrl + C 退出)"
     sudo systemctl status zgs
     echo "=============================================="
 }
@@ -229,8 +229,19 @@ set_alias() {
 
 }
 
+# 定义颜色变量
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+MAGENTA='\033[0;35m'
+LIGHT_GRAY='\033[0;37m'
+UNDERLINE_BLUE='\033[4;34m'
+LIGHT_BLUE='\033[1;34m'
+NC='\033[0m'
+
 # ------ 变量 ------
-SCRIPT_VERSION="1.0.4" # 本地版本
+SCRIPT_VERSION="1.0.5" # 本地版本
 REPO_URL="https://raw.githubusercontent.com/yixingweb3/0g-script/main/version.txt"
 SCRIPT_URL="https://raw.githubusercontent.com/yixingweb3/0g-script/main/0g.sh"
 
@@ -242,27 +253,30 @@ check_update # 每次启动时检查更新
 # -------------------------------
 # 主菜单
 # -------------------------------
+
 while true; do
     echo ""
-    echo "============================"
-    echo "0g 脚本管理菜单"
-    echo "============================"
-    echo "本脚本由 逸星web3 维护, 免费开源"
-    echo "推特: x.com/yixing_web3"
-    echo "有问题请在推特留言或加群"
-    echo "TG 群: t.me/yixingweb3_group"
-    echo "============================"
-    echo "1. 安装 0g 存储节点"
-    echo "2. 查看服务运行状态"
-    echo "3. 卸载存储节点"
-    echo "4. 查看 EVM 私钥"
-    echo "5. 修改 EVM 私钥"
-    echo "6. 查看 0g 存储节点日志"
-    echo "7. 检查更新"
-    echo "0. 退出"
-    echo "✅ 退出后可以输入 '0g' 来打开脚本管理菜单！"
-    echo "============================"
-    read -p "请选择操作 (0-6): " choice
+    echo -e "${LIGHT_GRAY}============================${NC}"
+    echo -e "${CYAN} 0g 脚本管理菜单 (版本 $SCRIPT_VERSION)${NC}"
+    echo -e "${LIGHT_GRAY}============================${NC}"
+    echo -e "本脚本由 ${YELLOW}逸星web3${NC} 维护, 免费开源"
+    echo -e "${MAGENTA}推特:${NC} ${LIGHT_BLUE}x.com/yixing_web3${NC}"
+    echo -e "${MAGENTA}TG 群:${NC} ${LIGHT_BLUE}t.me/yixingweb3_group${NC}"
+    echo -e "${GREEN}有问题请在推特留言或加群${NC}"
+    echo -e "${LIGHT_GRAY}============================${NC}"
+    echo -e "${CYAN}1.${NC} 安装 0g 存储节点"
+    echo -e "${CYAN}2.${NC} 查看存储节点运行状态"
+    echo -e "${CYAN}3.${NC} 卸载存储节点"
+    echo -e "${CYAN}4.${NC} 查看 EVM 私钥"
+    echo -e "${CYAN}5.${NC} 修改 EVM 私钥"
+    echo -e "${CYAN}6.${NC} 查看 0g 存储节点日志"
+    echo -e "${CYAN}7.${NC} 检查更新"
+    # echo -e "${CYAN}8.${NC} 生成新钱包（助记词、私钥、地址）"
+    echo -e "${CYAN}0.${NC} 退出"
+    echo -e "${LIGHT_GRAY}============================${NC}"
+    echo -e "退出后可以输入 ${YELLOW}0g${NC} 来打开脚本管理菜单！"
+    echo -e "${LIGHT_GRAY}============================${NC}"
+    read -p "$(echo -e "${YELLOW}请选择操作 (0-8): ${NC}")" choice
 
     case $choice in
     1)
@@ -286,7 +300,6 @@ while true; do
         read -p "输入任意键返回主菜单 (Enter): " dummy
         ;;
     6)
-        # 选项 6 为持续监控日志，用户需按 Ctrl+C 退出后再返回主菜单
         view_logs
         read -p "输入任意键返回主菜单 (Enter): " dummy
         ;;
@@ -295,6 +308,10 @@ while true; do
         echo "检查是否有新版本..."
         check_update
         ;;
+    # 8)
+    #     generate_wallet_module
+    #     read -p "输入任意键返回主菜单 (Enter): " dummy
+    #     ;;
     0)
         echo "退出..."
         exit 0
